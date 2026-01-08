@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>시장 현황 (Yahoo)</title>
+<style>
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif;background:#fff}
+  .wrap{padding:14px;max-width:900px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 10px 0}
+  .muted{color:#666;font-size:12px;margin:0 0 14px 0}
+
+  /* 요약 박스: 세로 */
+  .summary{display:flex;flex-direction:column;gap:10px}
+  .box{border:1px solid #e5e5e5;border-radius:12px;padding:12px}
+  .k{font-size:12px;color:#666;margin-bottom:6px}
+  .v{font-size:22px;font-weight:800;line-height:1.1}
+  .c{font-size:12px;margin-top:6px;color:#333}
+  .ts{font-size:11px;margin-top:6px;color:#888}
+
+  .chart{margin-top:18px;padding-top:14px;border-top:1px solid #eee}
+  .chart h2{font-size:15px;margin:0 0 8px 0}
+  canvas{width:100% !important;height:320px !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>시장 현황 요약</h1>
+  <p class="muted">데이터: Yahoo Finance(야후 파이낸스) | 자동 갱신: 5분 단위(저장소 업데이트 기준)</p>
+
+  <div class="summary">
+    <div class="box">
+      <div class="k">USD/KRW 환율</div>
+      <div class="v" id="v_fx">-</div>
+      <div class="c" id="c_fx">-</div>
+      <div class="ts" id="t_fx">-</div>
+    </div>
+
+    <div class="box">
+      <div class="k">미국채 10년물 수익률 (10Y)</div>
+      <div class="v" id="v_10y">-</div>
+      <div class="c" id="c_10y">-</div>
+      <div class="ts" id="t_10y">-</div>
+    </div>
+
+    <div class="box">
+      <div class="k">WTI 유가</div>
+      <div class="v" id="v_wti">-</div>
+      <div class="c" id="c_wti">-</div>
+      <div class="ts" id="t_wti">-</div>
+    </div>
+  </div>
+
+  <div class="chart">
+    <h2>미국채 10년물 (최근 5일)</h2>
+    <canvas id="ch_10y"></canvas>
+  </div>
+
+  <div class="chart">
+    <h2>WTI 유가 (최근 5일)</h2>
+    <canvas id="ch_wti"></canvas>
+  </div>
+
+  <div class="chart">
+    <h2>USD/KRW 환율 (최근 5일)</h2>
+    <canvas id="ch_fx"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  // ---------- 유틸 ----------
+  const fmt = (n, d=2) => (n===null || n===undefined || Number.isNaN(n)) ? "-" :
+    Number(n).toLocaleString("ko-KR", {maximumFractionDigits:d, minimumFractionDigits:d});
+
+  function lastValid(arr){
+    for(let i=arr.length-1;i>=0;i--){
+      const v = arr[i];
+      if(v!==null && v!==undefined && !Number.isNaN(v)) return v;
+    }
+    return null;
+  }
+
+  function parseYahooChart(j){
+    // Yahoo v8 chart 구조: chart.result[0]...
+    const r = j?.chart?.result?.[0];
+    if(!r) return null;
+
+    const ts = r.timestamp || [];
+    const q = r.indicators?.quote?.[0] || {};
+    // close 우선, 없으면 regularMarketPrice(meta)
+    const close = q.close || [];
+    const last = lastValid(close) ?? r.meta?.regularMarketPrice ?? null;
+
+    const prev = r.meta?.previousClose ?? null;
+    const chg = (last!=null && prev!=null) ? (last - prev) : null;
+    const chgp = (last!=null && prev!=null && prev!==0) ? (chg/prev*100) : null;
+
+    // 차트용
+    const labels = ts.map(t => new Date(t*1000));
+    const series = close.map(v => (v==null? null : Number(v)));
+
+    return { last, prev, chg, chgp, labels, series, meta: r.meta };
+  }
+
+  function renderSummary(prefix, parsed, transform=null, suffix=""){
+    const vEl = document.getElementById(`v_${prefix}`);
+    const cEl = document.getElementById(`c_${prefix}`);
+    const tEl = document.getElementById(`t_${prefix}`);
+
+    if(!parsed){ vEl.textContent="-"; cEl.textContent="-"; tEl.textContent="-"; return; }
+
+    let last = parsed.last, chg = parsed.chg, chgp = parsed.chgp;
+
+    if(transform){
+      last = transform(last);
+      if(chg!=null) chg = transform(parsed.prev + parsed.chg) - transform(parsed.prev);
+      // chgp는 비율이라 그대로
+    }
+
+    vEl.textContent = `${fmt(last, prefix==="10y" ? 2 : 2)}${suffix}`;
+
+    const arrow = (chg==null) ? "" : (chg>0 ? "▲" : (chg<0 ? "▼" : "—"));
+    const sign = (chg==null) ? "" : (chg>0 ? "+" : "");
+    cEl.textContent = (chg==null || chgp==null) ? "-" :
+      `${arrow} ${sign}${fmt(chg, prefix==="10y"?2:2)} (${sign}${fmt(chgp,2)}%)`;
+
+    const rt = parsed.meta?.regularMarketTime ? new Date(parsed.meta.regularMarketTime*1000) : null;
+    tEl.textContent = rt ? `업데이트: ${rt.toLocaleString("ko-KR")}` : "업데이트: -";
+  }
+
+  function renderChart(canvasId, parsed, title, yTransform=null){
+    const ctx = document.getElementById(canvasId);
+    const labels = parsed.labels;
+    const data = parsed.series.map(v => (v==null? null : (yTransform? yTransform(v) : v)));
+
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{ label: title, data, spanGaps:true, pointRadius:0, borderWidth:2 }] },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        scales:{
+          x:{ type:'time', time:{ unit:'day' } },
+          y:{ ticks:{ callback:(v)=>v.toLocaleString("ko-KR") } }
+        },
+        plugins:{ legend:{ display:false } }
+      }
+    });
+  }
+
+  // ---------- 데이터 로드 ----------
+  async function loadAll(){
+    const [fxJ, y10J, wtiJ] = await Promise.all([
+      fetch("./data/usdkrw.json", {cache:"no-store"}).then(r=>r.json()),
+      fetch("./data/us10y.json",  {cache:"no-store"}).then(r=>r.json()),
+      fetch("./data/wti.json",    {cache:"no-store"}).then(r=>r.json()),
+    ]);
+
+    const fx  = parseYahooChart(fxJ);
+    const y10 = parseYahooChart(y10J);
+    const wti = parseYahooChart(wtiJ);
+
+    // US10Y: Yahoo에서는 ^TNX가 "수익률×10" 형태로 많이 제공됨 → 10으로 나눠 %로 표시
+    // (예: 43.25 → 4.325%)
+    const tnxToPct = (v)=> v/10;
+
+    renderSummary("fx",  fx,  null, "");
+    renderSummary("10y", y10, tnxToPct, "%");
+    renderSummary("wti", wti, null, "");
+
+    renderChart("ch_fx",  fx,  "USD/KRW (Yahoo)");
+    renderChart("ch_10y", y10, "US10Y (Yahoo)", tnxToPct);
+    renderChart("ch_wti", wti, "WTI (Yahoo)");
+  }
+
+  loadAll();
+  // 화면 켜둔 상태에서 60초마다 리로드 (데이터 파일이 갱신되면 반영)
+  setInterval(loadAll, 60*1000);
+</script>
+</body>
+</html>
