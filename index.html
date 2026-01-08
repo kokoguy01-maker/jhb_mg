@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>시장 현황 요약</title>
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -25,16 +28,11 @@
       color: #666;
       margin-bottom: 14px;
     }
-
-    .summary {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
     .box {
       border: 1px solid #e5e5e5;
       border-radius: 12px;
       padding: 14px;
+      margin-bottom: 16px;
     }
     .k {
       font-size: 13px;
@@ -44,20 +42,11 @@
     .v {
       font-size: 22px;
       font-weight: 700;
-      line-height: 1.2;
     }
-    .ts {
-      font-size: 11px;
-      margin-top: 6px;
-      color: #888;
-    }
-    .error {
-      color: #c0392b;
-      font-size: 13px;
-    }
-    .loading {
-      color: #999;
-      font-size: 14px;
+    canvas {
+      width: 100% !important;
+      height: 260px !important;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -69,115 +58,89 @@
     데이터: Yahoo Finance | 자동 갱신: GitHub Actions
   </div>
 
-  <div class="summary">
+  <div class="box">
+    <div class="k">USD/KRW 환율</div>
+    <div class="v" id="v_fx">-</div>
+    <canvas id="c_fx"></canvas>
+  </div>
 
-    <div class="box">
-      <div class="k">USD/KRW 환율</div>
-      <div class="v loading" id="v_fx">불러오는 중…</div>
-      <div class="ts" id="t_fx"></div>
-    </div>
+  <div class="box">
+    <div class="k">미국채 10년물 수익률 (10Y)</div>
+    <div class="v" id="v_10y">-</div>
+    <canvas id="c_10y"></canvas>
+  </div>
 
-    <div class="box">
-      <div class="k">미국채 10년물 수익률 (10Y)</div>
-      <div class="v loading" id="v_10y">불러오는 중…</div>
-      <div class="ts" id="t_10y"></div>
-    </div>
-
-    <div class="box">
-      <div class="k">WTI 유가</div>
-      <div class="v loading" id="v_wti">불러오는 중…</div>
-      <div class="ts" id="t_wti"></div>
-    </div>
-
+  <div class="box">
+    <div class="k">WTI 유가</div>
+    <div class="v" id="v_wti">-</div>
+    <canvas id="c_wti"></canvas>
   </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+async function loadJSON(url) {
+  const res = await fetch(url + '?t=' + Date.now());
+  return res.json();
+}
 
-  async function loadJSON(url) {
-    const res = await fetch(url + '?t=' + Date.now());
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  }
-
-  function setError(valueEl, timeEl, msg) {
-    valueEl.innerText = msg;
-    valueEl.className = 'v error';
-    timeEl.innerText = '';
-  }
-
-  function setValue(valueEl, timeEl, text, unixTime) {
-    valueEl.innerText = text;
-    valueEl.className = 'v';
-    if (unixTime) {
-      const dt = new Date(unixTime * 1000);
-      timeEl.innerText = '업데이트: ' + dt.toLocaleString();
+function drawChart(canvasId, labels, data, label) {
+  new Chart(document.getElementById(canvasId), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label,
+        data,
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: { ticks: { maxTicksLimit: 5 } }
+      }
     }
-  }
+  });
+}
 
+(async () => {
   // USD/KRW
-  (async () => {
-    const v = document.getElementById('v_fx');
-    const t = document.getElementById('t_fx');
-    try {
-      const j = await loadJSON('./data/usdkrw.json');
-      const meta = j?.chart?.result?.[0]?.meta;
-      if (!meta?.regularMarketPrice) throw new Error('No price');
-      setValue(
-        v,
-        t,
-        meta.regularMarketPrice.toLocaleString() + ' 원',
-        meta.regularMarketTime
-      );
-    } catch (e) {
-      console.error('USD/KRW', e);
-      setError(v, t, '데이터 없음');
-    }
-  })();
+  const fx = await loadJSON('./data/usdkrw.json');
+  const fxMeta = fx.chart.result[0].meta;
+  const fxData = fx.chart.result[0].indicators.quote[0].close;
+  const fxTime = fx.chart.result[0].timestamp.map(t =>
+    new Date(t * 1000).toLocaleDateString()
+  );
+  document.getElementById('v_fx').innerText =
+    fxMeta.regularMarketPrice.toLocaleString() + ' 원';
+  drawChart('c_fx', fxTime, fxData, 'USD/KRW');
 
-  // 미국채 10Y
-  (async () => {
-    const v = document.getElementById('v_10y');
-    const t = document.getElementById('t_10y');
-    try {
-      const j = await loadJSON('./data/us10y.json');
-      const meta = j?.chart?.result?.[0]?.meta;
-      if (!meta?.regularMarketPrice) throw new Error('No price');
-      setValue(
-        v,
-        t,
-        meta.regularMarketPrice.toFixed(2) + ' %',
-        meta.regularMarketTime
-      );
-    } catch (e) {
-      console.error('US10Y', e);
-      setError(v, t, '데이터 없음');
-    }
-  })();
+  // US 10Y
+  const y10 = await loadJSON('./data/us10y.json');
+  const y10Meta = y10.chart.result[0].meta;
+  const y10Data = y10.chart.result[0].indicators.quote[0].close;
+  const y10Time = y10.chart.result[0].timestamp.map(t =>
+    new Date(t * 1000).toLocaleDateString()
+  );
+  document.getElementById('v_10y').innerText =
+    y10Meta.regularMarketPrice.toFixed(2) + ' %';
+  drawChart('c_10y', y10Time, y10Data, 'US 10Y');
 
   // WTI
-  (async () => {
-    const v = document.getElementById('v_wti');
-    const t = document.getElementById('t_wti');
-    try {
-      const j = await loadJSON('./data/wti.json');
-      const meta = j?.chart?.result?.[0]?.meta;
-      if (!meta?.regularMarketPrice) throw new Error('No price');
-      setValue(
-        v,
-        t,
-        '$ ' + meta.regularMarketPrice.toFixed(2),
-        meta.regularMarketTime
-      );
-    } catch (e) {
-      console.error('WTI', e);
-      setError(v, t, '데이터 없음');
-    }
-  })();
-
-});
+  const wti = await loadJSON('./data/wti.json');
+  const wtiMeta = wti.chart.result[0].meta;
+  const wtiData = wti.chart.result[0].indicators.quote[0].close;
+  const wtiTime = wti.chart.result[0].timestamp.map(t =>
+    new Date(t * 1000).toLocaleDateString()
+  );
+  document.getElementById('v_wti').innerText =
+    '$ ' + wtiMeta.regularMarketPrice.toFixed(2);
+  drawChart('c_wti', wtiTime, wtiData, 'WTI');
+})();
 </script>
-
 </body>
 </html>
