@@ -2,7 +2,7 @@ name: Update Yahoo Finance Data
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/30 * * * *"   # 🔽 30분 주기 (중요)
   workflow_dispatch:
 
 jobs:
@@ -14,12 +14,30 @@ jobs:
       - name: Fetch Yahoo Finance data
         run: |
           mkdir -p data
-          curl -sL "https://query1.finance.yahoo.com/v8/finance/chart/USDKRW=X?range=5d&interval=15m" -o data/usdkrw.json
-          curl -sL "https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX?range=5d&interval=15m" -o data/us10y.json
-          curl -sL "https://query1.finance.yahoo.com/v8/finance/chart/CL=F?range=5d&interval=15m" -o data/wti.json
+
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+
+          curl -A "$UA" -sL \
+            "https://query1.finance.yahoo.com/v8/finance/chart/USDKRW=X?range=5d&interval=15m" \
+            -o data/usdkrw.json
+
+          sleep 5
+
+          curl -A "$UA" -sL \
+            "https://query1.finance.yahoo.com/v8/finance/chart/%5ETYX?range=5d&interval=15m" \
+            -o data/us10y.json
+
+          sleep 5
+
+          curl -A "$UA" -sL \
+            "https://query1.finance.yahoo.com/v8/finance/chart/CL=F?range=5d&interval=15m" \
+            -o data/wti.json
 
       - name: Commit data
         run: |
+          # 🔴 에러 파일이면 중단
+          grep -q "Too Many Requests" data/usdkrw.json && exit 0
+
           git config user.name "yahoo-bot"
           git config user.email "yahoo-bot@users.noreply.github.com"
           git add data/*.json
