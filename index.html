@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>시장 현황 요약</title>
 
-  <!-- Chart.js 먼저 로드 (미국채 차트용) -->
+  <!-- Chart.js (미국채 차트용) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -31,8 +31,10 @@
       font-size: 12px;
       color: #9aa4b2;
       margin-bottom: 20px;
+      line-height: 1.4;
     }
 
+    /* ✅ 카드 공통 규격(요약/차트/미국채 모두 동일) */
     .card {
       background: linear-gradient(180deg, #1a2233, #141b29);
       border-radius: 14px;
@@ -41,13 +43,17 @@
       overflow: hidden;
     }
 
+    /* ✅ 제목 공통 규격 */
     .card-title {
       font-size: 13px;
       color: #c8d2e1;
       margin-bottom: 10px;
+      font-weight: 700;
     }
 
-    /* 요약(숫자) 카드 영역 */
+    /* =========================
+       A) 요약 카드 영역 (공통)
+       ========================= */
     .summary-row {
       display: flex;
       flex-direction: column;
@@ -94,18 +100,24 @@
       margin-top: 4px;
     }
 
-    /* 트레이딩뷰 위젯 컨테이너 높이 */
+    /* =========================
+       TradingView 위젯 높이 통일
+       ========================= */
+    /* ✅ 요약(미니) 위젯: 카드 안에서 안정적으로 보이도록 높이 고정 */
     .tv-mini {
-      height: 120px;
+      height: 140px;
     }
+
+    /* ✅ 환율/유가 차트: 미국채와 완전 동일 크기 */
     .tv-chart {
       height: 360px;
     }
 
-    /* 차트 캔버스 */
+    /* ✅ 미국채 차트 캔버스: 동일 높이 */
     #bondChart {
       width: 100% !important;
       height: 360px !important;
+      display: block;
     }
 
     .err {
@@ -121,18 +133,22 @@
 <body>
 <div class="wrap">
   <h1>시장 현황 요약</h1>
-  <div class="muted">환율·유가: 실시간(트레이딩뷰(TradingView→트레이딩뷰)) / 미국채 10Y: 30분 기준(Yahoo Finance)</div>
+  <div class="muted">
+    환율·유가: 실시간(TradingView→트레이딩뷰) / 미국채 10Y: 30분 기준(Yahoo Finance→야후 파이낸스)
+  </div>
 
   <!-- =========================
        A) 요약 카드 (환율/유가: 트레이딩뷰 숫자, 미국채: Yahoo JSON)
        ========================= -->
 
-  <!-- 환율 요약 (트레이딩뷰 Mini Symbol Overview) -->
+  <!-- 환율 요약 -->
   <div class="card">
     <div class="card-title">USD/KRW 환율</div>
     <div class="tradingview-widget-container tv-mini">
       <div class="tradingview-widget-container__widget"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+      <script type="text/javascript"
+              src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+              async>
       {
         "symbol": "FX_IDC:USDKRW",
         "locale": "kr",
@@ -142,18 +158,20 @@
         "autosize": true,
         "largeChartUrl": "",
         "width": "100%",
-        "height": 120
+        "height": 140
       }
       </script>
     </div>
   </div>
 
-  <!-- 유가 요약 (트레이딩뷰 Mini Symbol Overview) -->
+  <!-- 유가 요약 (✅ 팝업 방지: TVC:USOIL) -->
   <div class="card">
     <div class="card-title">WTI 유가</div>
     <div class="tradingview-widget-container tv-mini">
       <div class="tradingview-widget-container__widget"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+      <script type="text/javascript"
+              src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+              async>
       {
         "symbol": "TVC:USOIL",
         "locale": "kr",
@@ -163,7 +181,7 @@
         "autosize": true,
         "largeChartUrl": "",
         "width": "100%",
-        "height": 120
+        "height": 140
       }
       </script>
     </div>
@@ -190,15 +208,17 @@
   </div>
 
   <!-- =========================
-       B) 차트 (환율/유가: 트레이딩뷰 선 그래프 / 미국채: 기존 선 그래프)
+       B) 차트 (환율/유가: 트레이딩뷰 / 미국채: Chart.js)
        ========================= -->
 
-  <!-- 환율 차트 -->
+  <!-- 환율 차트 (✅ 360px로 통일) -->
   <div class="card">
     <div class="card-title">USD/KRW 환율 차트 (REAL-TIME)</div>
     <div class="tradingview-widget-container tv-chart">
       <div class="tradingview-widget-container__widget"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+      <script type="text/javascript"
+              src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js"
+              async>
       {
         "symbol": "FX_IDC:USDKRW",
         "interval": "5",
@@ -219,12 +239,14 @@
     </div>
   </div>
 
-  <!-- 유가 차트 -->
+  <!-- 유가 차트 (✅ 360px로 통일 / ✅ 팝업 방지: TVC:USOIL) -->
   <div class="card">
     <div class="card-title">WTI 유가 차트 (REAL-TIME)</div>
     <div class="tradingview-widget-container tv-chart">
       <div class="tradingview-widget-container__widget"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+      <script type="text/javascript"
+              src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js"
+              async>
       {
         "symbol": "TVC:USOIL",
         "interval": "5",
@@ -245,7 +267,7 @@
     </div>
   </div>
 
-  <!-- 미국채 차트 (Yahoo JSON 선그래프) -->
+  <!-- 미국채 차트 (360px) -->
   <div class="card">
     <div class="card-title">미국채 10년물 (30분 기준)</div>
     <canvas id="bondChart"></canvas>
@@ -265,15 +287,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   function fmtSigned(n, digits = 2) {
     const v = Number(n);
     if (!isFinite(v)) return "-";
-    const s = (v >= 0 ? "+" : "") + v.toFixed(digits);
-    return s;
+    return (v >= 0 ? "+" : "") + v.toFixed(digits);
   }
 
   function fmtSignedPct(n, digits = 2) {
     const v = Number(n);
     if (!isFinite(v)) return "-";
-    const s = (v >= 0 ? "+" : "") + v.toFixed(digits) + " %";
-    return s;
+    return (v >= 0 ? "+" : "") + v.toFixed(digits) + " %";
   }
 
   try {
@@ -285,7 +305,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const meta = r0?.meta;
 
     const price = Number(meta?.regularMarketPrice);
-    const prev = Number(meta?.chartPreviousClose ?? meta?.previousClose);
+    const prev  = Number(meta?.chartPreviousClose ?? meta?.previousClose);
 
     if (!isFinite(price)) throw new Error("regularMarketPrice 파싱 실패");
 
@@ -306,7 +326,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("bondPct").innerText = "변화율 -";
     }
 
-    // 차트
+    // 차트 데이터
     const ts = r0?.timestamp || [];
     const close = r0?.indicators?.quote?.[0]?.close || [];
 
@@ -314,7 +334,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const d = new Date(x * 1000);
       return d.toLocaleTimeString();
     });
-
     const data = close.map(x => (x == null ? null : Number(x)));
 
     const ctx = document.getElementById("bondChart").getContext("2d");
@@ -336,7 +355,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         plugins: { legend: { display: false } },
         scales: {
           x: { display: false },
-          y: { display: true, ticks: { color: "#9aa4b2" }, grid: { color: "rgba(255,255,255,0.06)" } }
+          y: {
+            display: true,
+            ticks: { color: "#9aa4b2" },
+            grid: { color: "rgba(255,255,255,0.06)" }
+          }
         }
       }
     });
