@@ -2,62 +2,68 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>시장 현황 요약</title>
-
-  <!-- Chart.js (미국채 10Y 전용) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
     body {
       margin: 0;
+      background: #0e1625;
+      color: #fff;
       font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
-      background: #ffffff;
     }
     .wrap {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
-      padding: 16px;
+      padding: 20px;
     }
     h1 {
-      font-size: 20px;
       margin-bottom: 6px;
     }
     .muted {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 16px;
-    }
-    .box {
-      border: 1px solid #e5e5e5;
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 24px;
-    }
-    .k {
       font-size: 13px;
-      color: #666;
-      margin-bottom: 8px;
+      color: #aaa;
+      margin-bottom: 20px;
     }
-    iframe {
-      width: 100%;
-      height: 320px;
-      border: none;
-      margin-top: 8px;
+
+    /* ===== 요약 카드 ===== */
+    .snapshot {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 30px;
     }
-    canvas {
-      width: 100% !important;
-      height: 260px !important;
-      margin-top: 10px;
+    .card {
+      background: linear-gradient(135deg, #1c2536, #222c40);
+      border-radius: 16px;
+      padding: 18px 20px;
     }
-    .v {
-      font-size: 22px;
+    .title {
+      font-size: 14px;
+      opacity: .8;
+      margin-bottom: 6px;
+    }
+    .value {
+      font-size: 30px;
       font-weight: 700;
-      margin-bottom: 4px;
     }
-    .ts {
-      font-size: 11px;
-      color: #888;
+    .delta {
+      font-size: 15px;
+      margin-top: 4px;
+    }
+    .up { color: #35d0a3; }
+    .down { color: #ff6b6b; }
+
+    /* ===== 차트 ===== */
+    .chart-box {
+      margin-bottom: 28px;
+      background: #111a2b;
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .chart-title {
+      font-size: 15px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -70,75 +76,114 @@
     환율·유가: 실시간(TradingView) / 미국채 10Y: 30분 기준(Yahoo Finance)
   </div>
 
-  <!-- USD/KRW -->
-  <div class="box">
-    <div class="k">USD/KRW 환율 · REAL-TIME</div>
-    <iframe
-      src="https://s.tradingview.com/embed-widget/symbol-overview/?locale=kr&symbol=FX_IDC%3AUSDKRW&interval=5&theme=light&style=3">
-    </iframe>
+  <!-- ================= 요약 ================= -->
+  <div class="snapshot">
+    <div class="card">
+      <div class="title">USD/KRW</div>
+      <div class="value">실시간</div>
+      <div class="delta up">TradingView</div>
+    </div>
+
+    <div class="card">
+      <div class="title">WTI 유가</div>
+      <div class="value">실시간</div>
+      <div class="delta up">TradingView</div>
+    </div>
+
+    <div class="card">
+      <div class="title">미국채 10년물 수익률</div>
+      <div class="value" id="us10y_val">-</div>
+      <div class="delta" id="us10y_ts"></div>
+    </div>
   </div>
 
-  <!-- WTI (팝업 없는 공개 심볼) -->
-  <div class="box">
-    <div class="k">WTI 유가 · REAL-TIME</div>
-    <iframe
-      src="https://s.tradingview.com/embed-widget/symbol-overview/?locale=kr&symbol=TVC%3AUSOIL&interval=5&theme=light&style=3">
-    </iframe>
+  <!-- ================= 환율 차트 ================= -->
+  <div class="chart-box">
+    <div class="chart-title">USD/KRW 환율 차트 (REAL-TIME)</div>
+    <div id="tv_fx"></div>
   </div>
 
-  <!-- 미국채 10Y -->
-  <div class="box">
-    <div class="k">미국채 10년물 수익률 (10Y)</div>
-    <div class="v" id="v_10y">-</div>
-    <div class="ts" id="t_10y"></div>
-    <canvas id="chart10y"></canvas>
+  <!-- ================= 유가 차트 ================= -->
+  <div class="chart-box">
+    <div class="chart-title">WTI 유가 차트 (REAL-TIME)</div>
+    <div id="tv_oil"></div>
+  </div>
+
+  <!-- ================= 미국채 차트 ================= -->
+  <div class="chart-box">
+    <div class="chart-title">미국채 10년물 (30분 기준)</div>
+    <canvas id="us10yChart"></canvas>
   </div>
 
 </div>
 
+<!-- ===== TradingView ===== -->
+<script src="https://s3.tradingview.com/tv.js"></script>
+
 <script>
-async function loadUS10Y() {
-  const res = await fetch("./data/us10y.json?t=" + Date.now());
+new TradingView.widget({
+  container_id: "tv_fx",
+  symbol: "FX_IDC:USDKRW",
+  interval: "5",
+  timezone: "Asia/Seoul",
+  theme: "dark",
+  style: "2",
+  hide_side_toolbar: true,
+  hide_top_toolbar: false,
+  autosize: true,
+  withdateranges: false,
+  allow_symbol_change: false
+});
+
+new TradingView.widget({
+  container_id: "tv_oil",
+  symbol: "TVC:USOIL",
+  interval: "5",
+  timezone: "Asia/Seoul",
+  theme: "dark",
+  style: "2",
+  hide_side_toolbar: true,
+  hide_top_toolbar: false,
+  autosize: true,
+  allow_symbol_change: false
+});
+</script>
+
+<!-- ===== 미국채 10Y ===== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(async () => {
+  const res = await fetch('./data/us10y.json?t=' + Date.now());
   const json = await res.json();
 
-  const meta = json.chart.result[0].meta;
   const prices = json.chart.result[0].indicators.quote[0].close;
-  const timestamps = json.chart.result[0].timestamp;
-
-  document.getElementById("v_10y").innerText =
-    meta.regularMarketPrice.toFixed(2) + " %";
-
-  document.getElementById("t_10y").innerText =
-    "기준 시각: " + new Date(meta.regularMarketTime * 1000).toLocaleString("ko-KR");
-
-  const labels = timestamps.map(t =>
-    new Date(t * 1000).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
+  const times = json.chart.result[0].timestamp.map(t =>
+    new Date(t * 1000).toLocaleTimeString()
   );
 
-  new Chart(document.getElementById("chart10y"), {
+  const latest = prices[prices.length - 1];
+  document.getElementById("us10y_val").innerText = latest.toFixed(2) + " %";
+  document.getElementById("us10y_ts").innerText =
+    "기준: " + new Date().toLocaleString();
+
+  new Chart(document.getElementById("us10yChart"), {
     type: "line",
     data: {
-      labels,
+      labels: times,
       datasets: [{
         data: prices,
-        borderColor: "#444",
-        borderWidth: 1.5,
-        pointRadius: 0,
-        tension: 0.25
+        borderColor: "#9aa4ff",
+        tension: 0.25,
+        pointRadius: 0
       }]
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { display: false },
-        y: { ticks: { callback: v => v.toFixed(2) } }
-      }
+      plugins: { legend: { display: false }},
+      scales: { x: { display: false } }
     }
   });
-}
-
-loadUS10Y();
+})();
 </script>
 
 </body>
