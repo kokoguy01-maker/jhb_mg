@@ -1,190 +1,50 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <title>시장 현황 요약</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 요약 카드 -->
+<div class="summary-grid">
 
-  <style>
-    body {
-      margin: 0;
-      background: #0e1625;
-      color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
-    }
-    .wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    h1 {
-      margin-bottom: 6px;
-    }
-    .muted {
-      font-size: 13px;
-      color: #aaa;
-      margin-bottom: 20px;
-    }
-
-    /* ===== 요약 카드 ===== */
-    .snapshot {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      margin-bottom: 30px;
-    }
-    .card {
-      background: linear-gradient(135deg, #1c2536, #222c40);
-      border-radius: 16px;
-      padding: 18px 20px;
-    }
-    .title {
-      font-size: 14px;
-      opacity: .8;
-      margin-bottom: 6px;
-    }
-    .value {
-      font-size: 30px;
-      font-weight: 700;
-    }
-    .delta {
-      font-size: 15px;
-      margin-top: 4px;
-    }
-    .up { color: #35d0a3; }
-    .down { color: #ff6b6b; }
-
-    /* ===== 차트 ===== */
-    .chart-box {
-      margin-bottom: 28px;
-      background: #111a2b;
-      border-radius: 16px;
-      padding: 14px;
-    }
-    .chart-title {
-      font-size: 15px;
-      margin-bottom: 10px;
-    }
-  </style>
-</head>
-
-<body>
-<div class="wrap">
-
-  <h1>시장 현황 요약</h1>
-  <div class="muted">
-    환율·유가: 실시간(TradingView) / 미국채 10Y: 30분 기준(Yahoo Finance)
-  </div>
-
-  <!-- ================= 요약 ================= -->
-  <div class="snapshot">
-    <div class="card">
-      <div class="title">USD/KRW</div>
-      <div class="value">실시간</div>
-      <div class="delta up">TradingView</div>
-    </div>
-
-    <div class="card">
-      <div class="title">WTI 유가</div>
-      <div class="value">실시간</div>
-      <div class="delta up">TradingView</div>
-    </div>
-
-    <div class="card">
-      <div class="title">미국채 10년물 수익률</div>
-      <div class="value" id="us10y_val">-</div>
-      <div class="delta" id="us10y_ts"></div>
+  <!-- USD/KRW -->
+  <div class="summary-card">
+    <div class="summary-title">USD/KRW 환율</div>
+    <div class="tradingview-widget-container">
+      <div id="tv-usdkrw-summary"></div>
+      <script>
+        new TradingView.MiniSymbolWidget({
+          symbol: "FX_IDC:USDKRW",
+          width: "100%",
+          height: 120,
+          locale: "kr",
+          dateRange: "1D",
+          colorTheme: "dark",
+          isTransparent: true,
+          autosize: true,
+          largeChartUrl: "",
+          chartOnly: false,
+          noTimeScale: true
+        }, "tv-usdkrw-summary");
+      </script>
     </div>
   </div>
 
-  <!-- ================= 환율 차트 ================= -->
-  <div class="chart-box">
-    <div class="chart-title">USD/KRW 환율 차트 (REAL-TIME)</div>
-    <div id="tv_fx"></div>
-  </div>
-
-  <!-- ================= 유가 차트 ================= -->
-  <div class="chart-box">
-    <div class="chart-title">WTI 유가 차트 (REAL-TIME)</div>
-    <div id="tv_oil"></div>
-  </div>
-
-  <!-- ================= 미국채 차트 ================= -->
-  <div class="chart-box">
-    <div class="chart-title">미국채 10년물 (30분 기준)</div>
-    <canvas id="us10yChart"></canvas>
+  <!-- WTI -->
+  <div class="summary-card">
+    <div class="summary-title">WTI 유가</div>
+    <div class="tradingview-widget-container">
+      <div id="tv-wti-summary"></div>
+      <script>
+        new TradingView.MiniSymbolWidget({
+          symbol: "TVC:USOIL",
+          width: "100%",
+          height: 120,
+          locale: "kr",
+          dateRange: "1D",
+          colorTheme: "dark",
+          isTransparent: true,
+          autosize: true,
+          largeChartUrl: "",
+          chartOnly: false,
+          noTimeScale: true
+        }, "tv-wti-summary");
+      </script>
+    </div>
   </div>
 
 </div>
-
-<!-- ===== TradingView ===== -->
-<script src="https://s3.tradingview.com/tv.js"></script>
-
-<script>
-new TradingView.widget({
-  container_id: "tv_fx",
-  symbol: "FX_IDC:USDKRW",
-  interval: "5",
-  timezone: "Asia/Seoul",
-  theme: "dark",
-  style: "2",
-  hide_side_toolbar: true,
-  hide_top_toolbar: false,
-  autosize: true,
-  withdateranges: false,
-  allow_symbol_change: false
-});
-
-new TradingView.widget({
-  container_id: "tv_oil",
-  symbol: "TVC:USOIL",
-  interval: "5",
-  timezone: "Asia/Seoul",
-  theme: "dark",
-  style: "2",
-  hide_side_toolbar: true,
-  hide_top_toolbar: false,
-  autosize: true,
-  allow_symbol_change: false
-});
-</script>
-
-<!-- ===== 미국채 10Y ===== -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-(async () => {
-  const res = await fetch('./data/us10y.json?t=' + Date.now());
-  const json = await res.json();
-
-  const prices = json.chart.result[0].indicators.quote[0].close;
-  const times = json.chart.result[0].timestamp.map(t =>
-    new Date(t * 1000).toLocaleTimeString()
-  );
-
-  const latest = prices[prices.length - 1];
-  document.getElementById("us10y_val").innerText = latest.toFixed(2) + " %";
-  document.getElementById("us10y_ts").innerText =
-    "기준: " + new Date().toLocaleString();
-
-  new Chart(document.getElementById("us10yChart"), {
-    type: "line",
-    data: {
-      labels: times,
-      datasets: [{
-        data: prices,
-        borderColor: "#9aa4ff",
-        tension: 0.25,
-        pointRadius: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false }},
-      scales: { x: { display: false } }
-    }
-  });
-})();
-</script>
-
-</body>
-</html>
