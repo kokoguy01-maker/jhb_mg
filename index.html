@@ -1,50 +1,188 @@
-<!-- 요약 카드 -->
-<div class="summary-grid">
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>시장 현황 요약</title>
 
-  <!-- USD/KRW -->
-  <div class="summary-card">
-    <div class="summary-title">USD/KRW 환율</div>
-    <div class="tradingview-widget-container">
-      <div id="tv-usdkrw-summary"></div>
-      <script>
-        new TradingView.MiniSymbolWidget({
-          symbol: "FX_IDC:USDKRW",
-          width: "100%",
-          height: 120,
-          locale: "kr",
-          dateRange: "1D",
-          colorTheme: "dark",
-          isTransparent: true,
-          autosize: true,
-          largeChartUrl: "",
-          chartOnly: false,
-          noTimeScale: true
-        }, "tv-usdkrw-summary");
-      </script>
+  <!-- 🔴 TradingView 핵심 로더 (필수) -->
+  <script src="https://s3.tradingview.com/tv.js"></script>
+
+  <!-- Chart.js (미국채용) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #0b1324, #020617);
+      color: #e5e7eb;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    /* 요약 카드 */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .summary-card {
+      background: linear-gradient(180deg, #1c2636, #111827);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .summary-title {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: 8px;
+    }
+
+    /* 차트 */
+    .chart-box {
+      background: linear-gradient(180deg, #1c2636, #111827);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 28px;
+    }
+
+    .chart-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <h1>시장 현황 요약</h1>
+
+  <!-- ================= 요약 카드 ================= -->
+  <div class="summary-grid">
+
+    <!-- USD/KRW -->
+    <div class="summary-card">
+      <div class="summary-title">USD/KRW 환율</div>
+      <div id="usdkrw-summary"></div>
     </div>
+
+    <!-- WTI -->
+    <div class="summary-card">
+      <div class="summary-title">WTI 유가</div>
+      <div id="wti-summary"></div>
+    </div>
+
+    <!-- 미국채 -->
+    <div class="summary-card">
+      <div class="summary-title">미국채 10년물 수익률</div>
+      <div style="font-size:28px;font-weight:600;">4.82%</div>
+      <div style="font-size:12px;opacity:0.7;">30분 기준 (Yahoo Finance)</div>
+    </div>
+
   </div>
 
-  <!-- WTI -->
-  <div class="summary-card">
-    <div class="summary-title">WTI 유가</div>
-    <div class="tradingview-widget-container">
-      <div id="tv-wti-summary"></div>
-      <script>
-        new TradingView.MiniSymbolWidget({
-          symbol: "TVC:USOIL",
-          width: "100%",
-          height: 120,
-          locale: "kr",
-          dateRange: "1D",
-          colorTheme: "dark",
-          isTransparent: true,
-          autosize: true,
-          largeChartUrl: "",
-          chartOnly: false,
-          noTimeScale: true
-        }, "tv-wti-summary");
-      </script>
-    </div>
+  <!-- ================= 차트 ================= -->
+
+  <!-- USD/KRW 차트 -->
+  <div class="chart-box">
+    <div class="chart-title">USD/KRW 환율 차트 (REAL-TIME)</div>
+    <div id="usdkrw-chart" style="height:360px;"></div>
+  </div>
+
+  <!-- WTI 차트 -->
+  <div class="chart-box">
+    <div class="chart-title">WTI 유가 차트 (REAL-TIME)</div>
+    <div id="wti-chart" style="height:360px;"></div>
+  </div>
+
+  <!-- 미국채 차트 -->
+  <div class="chart-box">
+    <div class="chart-title">미국채 10년물 수익률 (30분 기준)</div>
+    <canvas id="us10yChart" height="360"></canvas>
   </div>
 
 </div>
+
+<script>
+  /* ================= 요약 카드 ================= */
+
+  new TradingView.MiniSymbolWidget({
+    symbol: "FX_IDC:USDKRW",
+    width: "100%",
+    height: 120,
+    locale: "kr",
+    dateRange: "1D",
+    colorTheme: "dark",
+    isTransparent: true,
+    noTimeScale: true
+  }, "usdkrw-summary");
+
+  new TradingView.MiniSymbolWidget({
+    symbol: "TVC:USOIL",
+    width: "100%",
+    height: 120,
+    locale: "kr",
+    dateRange: "1D",
+    colorTheme: "dark",
+    isTransparent: true,
+    noTimeScale: true
+  }, "wti-summary");
+
+  /* ================= 차트 ================= */
+
+  new TradingView.widget({
+    autosize: true,
+    symbol: "FX_IDC:USDKRW",
+    interval: "5",
+    timezone: "Asia/Seoul",
+    theme: "dark",
+    style: "1",
+    locale: "kr",
+    container_id: "usdkrw-chart"
+  });
+
+  new TradingView.widget({
+    autosize: true,
+    symbol: "TVC:USOIL",
+    interval: "5",
+    timezone: "Asia/Seoul",
+    theme: "dark",
+    style: "1",
+    locale: "kr",
+    container_id: "wti-chart"
+  });
+
+  /* ================= 미국채 (예시 데이터) ================= */
+  const ctx = document.getElementById('us10yChart');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ["01:00","01:30","02:00","02:30","03:00"],
+      datasets: [{
+        label: "US 10Y",
+        data: [4.87,4.85,4.88,4.83,4.82],
+        borderColor: "#9bbcff",
+        tension: 0.35
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { x: { display: false } }
+    }
+  });
+</script>
+
+</body>
+</html>
